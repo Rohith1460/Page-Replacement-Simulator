@@ -2,41 +2,33 @@ import React, { useState, useEffect } from 'react';
 import { Play, RotateCcw, ArrowLeft, Settings, Cpu, Clock, Activity, List } from 'lucide-react';
 
 const App = () => {
-  // --- State Management ---
-  const [view, setView] = useState('INPUT'); // INPUT, MENU, SIMULATION
+  const [view, setView] = useState('INPUT');
   const [numFrames, setNumFrames] = useState(3);
-  // Default string from Silberschatz Operating System Concepts
   const [refStrInput, setRefStrInput] = useState("7 0 1 2 0 3 0 4 2 3 0 3 2 1 2 0 1 7 0 1");
   const [refString, setRefString] = useState([]);
   const [selectedAlgo, setSelectedAlgo] = useState(null);
   
-  // Simulation Results
   const [simulationSteps, setSimulationSteps] = useState([]);
   const [metrics, setMetrics] = useState({ hits: 0, faults: 0, hitRatio: 0, faultRatio: 0 });
 
-  // Scroll to top on view change
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [view]);
 
-  // --- Logic / Algorithms (Ported directly from C source) ---
-
   const parseInput = () => {
-    // Regex splits by spaces, newlines, or tabs
     const arr = refStrInput.trim().split(/\s+/).map(Number).filter(n => !isNaN(n));
     if (arr.length === 0) return false;
     setRefString(arr);
     return true;
   };
 
-  // 1. FIFO Algorithm
   const simulateFIFO = () => {
     const frames = numFrames;
     const ref = refString;
     const refLen = ref.length;
     
     let frameArr = Array(frames).fill(-1);
-    let head = 0; // Points to the oldest page
+    let head = 0;
     let faults = 0;
     let hits = 0;
     const steps = [];
@@ -45,7 +37,6 @@ const App = () => {
       const page = ref[i];
       let found = false;
       
-      // Check if page exists in frames
       for (let j = 0; j < frames; j++) {
         if (frameArr[j] === page) {
           found = true;
@@ -60,7 +51,6 @@ const App = () => {
       } else {
         faults++;
         result = "FAULT";
-        // Replace at head
         frameArr[head] = page;
         head = (head + 1) % frames;
       }
@@ -70,7 +60,6 @@ const App = () => {
     return { steps, faults, hits, refLen };
   };
 
-  // 2. LRU Algorithm
   const simulateLRU = () => {
     const frames = numFrames;
     const ref = refString;
@@ -91,7 +80,7 @@ const App = () => {
       for (let j = 0; j < frames; j++) {
         if (frameArr[j] === page) {
           found = true;
-          lastUsed[j] = time; // Update time on hit
+          lastUsed[j] = time;
           break;
         }
       }
@@ -105,7 +94,6 @@ const App = () => {
         result = "FAULT";
         
         let replacedIndex = -1;
-        // 1. Look for empty slot
         for (let j = 0; j < frames; j++) {
           if (frameArr[j] === -1) {
             replacedIndex = j;
@@ -113,7 +101,6 @@ const App = () => {
           }
         }
 
-        // 2. If no empty slot, find Least Recently Used
         if (replacedIndex === -1) {
           let minTime = Number.MAX_SAFE_INTEGER;
           for (let j = 0; j < frames; j++) {
@@ -132,7 +119,6 @@ const App = () => {
     return { steps, faults, hits, refLen };
   };
 
-  // 3. Optimal Algorithm
   const simulateOptimal = () => {
     const frames = numFrames;
     const ref = refString;
@@ -163,7 +149,6 @@ const App = () => {
         result = "FAULT";
 
         let replaceIndex = -1;
-        // 1. Check for empty slot
         for (let j = 0; j < frames; j++) {
           if (frameArr[j] === -1) {
             replaceIndex = j;
@@ -171,14 +156,12 @@ const App = () => {
           }
         }
 
-        // 2. Look ahead to find the page used furthest in future
         if (replaceIndex === -1) {
           let farthestNext = -1;
           let farIndex = 0;
 
           for (let j = 0; j < frames; j++) {
             let nextPos = Number.MAX_SAFE_INTEGER;
-            // Search future
             for (let k = i + 1; k < refLen; k++) {
               if (ref[k] === frameArr[j]) {
                 nextPos = k;
@@ -186,7 +169,6 @@ const App = () => {
               }
             }
 
-            // If never used again, this is the best candidate
             if (nextPos === Number.MAX_SAFE_INTEGER) {
               farIndex = j;
               farthestNext = nextPos;
@@ -206,15 +188,14 @@ const App = () => {
     return { steps, faults, hits, refLen };
   };
 
-  // 4. Clock (Second Chance) Algorithm
   const simulateClock = () => {
     const frames = numFrames;
     const ref = refString;
     const refLen = ref.length;
 
     let frameArr = Array(frames).fill(-1);
-    let refBit = Array(frames).fill(0); // 0 or 1
-    let pointer = 0; // Circular pointer
+    let refBit = Array(frames).fill(0);
+    let pointer = 0;
     let faults = 0;
     let hits = 0;
     const steps = [];
@@ -223,11 +204,10 @@ const App = () => {
       const page = ref[i];
       let found = false;
 
-      // Check existence
       for (let j = 0; j < frames; j++) {
         if (frameArr[j] === page) {
           found = true;
-          refBit[j] = 1; // Give second chance
+          refBit[j] = 1;
           break;
         }
       }
@@ -241,7 +221,6 @@ const App = () => {
         result = "FAULT";
 
         let placed = false;
-        // 1. Fill empty slots first (common optimization, matches C code)
         for (let j = 0; j < frames; j++) {
           if (frameArr[j] === -1) {
             frameArr[j] = page;
@@ -251,17 +230,14 @@ const App = () => {
           }
         }
 
-        // 2. If no empty slots, use Clock logic
         if (!placed) {
           while (true) {
             if (refBit[pointer] === 0) {
-              // Replace victim
               frameArr[pointer] = page;
               refBit[pointer] = 1;
               pointer = (pointer + 1) % frames;
               break;
             } else {
-              // Consume second chance
               refBit[pointer] = 0;
               pointer = (pointer + 1) % frames;
             }
@@ -273,12 +249,9 @@ const App = () => {
     return { steps, faults, hits, refLen };
   };
 
-  // --- UI Handlers ---
-
   const handleInputSubmit = (e) => {
     e.preventDefault();
 
-    // Validate numFrames
     if (numFrames === '' || isNaN(numFrames) || numFrames < 1 || numFrames > 100) {
       alert("Please enter a valid number of frames (1-100).");
       return;
@@ -287,7 +260,6 @@ const App = () => {
     if (parseInput()) {
       setView('MENU');
     } else {
-      // Basic alert fallback, though input type=number prevents most bad inputs
       alert("Please enter a valid reference string.");
     }
   };
@@ -315,7 +287,6 @@ const App = () => {
 
   const reset = () => {
     setView('INPUT');
-    // Note: We keep refStrInput (the text) but clear refString (the array)
     setRefString([]);
     setSelectedAlgo(null);
   };
@@ -324,8 +295,6 @@ const App = () => {
     setView('MENU');
     setSelectedAlgo(null);
   };
-
-  // --- Render Components ---
 
   const renderInputScreen = () => (
     <div className="w-full max-w-2xl bg-white rounded-xl shadow-xl overflow-hidden border border-slate-200">
@@ -437,7 +406,6 @@ const App = () => {
         </div>
       </div>
 
-      {/* Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-center">
           <div className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-2">Total Hits</div>
@@ -457,7 +425,6 @@ const App = () => {
         </div>
       </div>
 
-      {/* Visualization Table */}
       <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left border-collapse">
