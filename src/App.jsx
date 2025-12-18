@@ -31,6 +31,7 @@ const App = () => {
     let head = 0;
     let faults = 0;
     let hits = 0;
+    let count = 0;
     const steps = [];
 
     for (let i = 0; i < refLen; i++) {
@@ -51,8 +52,14 @@ const App = () => {
       } else {
         faults++;
         result = "FAULT";
-        frameArr[head] = page;
-        head = (head + 1) % frames;
+        
+        if (count < frames) {
+          frameArr[count] = page;
+          count++;
+        } else {
+          frameArr[head] = page;
+          head = (head + 1) % frames;
+        }
       }
       
       steps.push({ page, frames: [...frameArr], result });
