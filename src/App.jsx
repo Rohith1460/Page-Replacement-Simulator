@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Play, RotateCcw, ArrowLeft, Settings, Cpu, Clock, Activity, List } from 'lucide-react';
 
+/*------Main Component--------*/
 const App = () => {
+  /*------State Variables--------*/
   const [view, setView] = useState('INPUT');
   const [numFrames, setNumFrames] = useState(3);
   const [refStrInput, setRefStrInput] = useState("7 0 1 2 0 3 0 4 2 3 0 3 2 1 2 0 1 7 0 1");
@@ -11,10 +13,12 @@ const App = () => {
   const [simulationSteps, setSimulationSteps] = useState([]);
   const [metrics, setMetrics] = useState({ hits: 0, faults: 0, hitRatio: 0, faultRatio: 0 });
 
+  /*------Scroll Effect--------*/
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [view]);
 
+  /*------Input Parser--------*/
   const parseInput = () => {
     const arr = refStrInput.trim().split(/\s+/).map(Number).filter(n => !isNaN(n));
     if (arr.length === 0) return false;
@@ -22,11 +26,13 @@ const App = () => {
     return true;
   };
 
+  /*------FIFO Algorithm--------*/
   const simulateFIFO = () => {
     const frames = numFrames;
     const ref = refString;
     const refLen = ref.length;
     
+    /*------Initialize Variables--------*/
     let frameArr = Array(frames).fill(-1);
     let head = 0;
     let faults = 0;
@@ -34,10 +40,12 @@ const App = () => {
     let count = 0;
     const steps = [];
 
+    /*------Process Pages--------*/
     for (let i = 0; i < refLen; i++) {
       const page = ref[i];
       let found = false;
       
+      /*------Check Page--------*/
       for (let j = 0; j < frames; j++) {
         if (frameArr[j] === page) {
           found = true;
@@ -53,6 +61,7 @@ const App = () => {
         faults++;
         result = "FAULT";
         
+        /*------Handle Fault--------*/
         if (count < frames) {
           frameArr[count] = page;
           count++;
@@ -67,11 +76,13 @@ const App = () => {
     return { steps, faults, hits, refLen };
   };
 
+  /*------LRU Algorithm--------*/
   const simulateLRU = () => {
     const frames = numFrames;
     const ref = refString;
     const refLen = ref.length;
 
+    /*------Initialize Variables--------*/
     let frameArr = Array(frames).fill(-1);
     let lastUsed = Array(frames).fill(-1);
     let time = 0;
@@ -79,11 +90,13 @@ const App = () => {
     let hits = 0;
     const steps = [];
 
+    /*------Process Pages--------*/
     for (let i = 0; i < refLen; i++) {
       const page = ref[i];
       let found = false;
       time++;
 
+      /*------Check Page--------*/
       for (let j = 0; j < frames; j++) {
         if (frameArr[j] === page) {
           found = true;
@@ -100,6 +113,7 @@ const App = () => {
         faults++;
         result = "FAULT";
         
+        /*------Find Replacement--------*/
         let replacedIndex = -1;
         for (let j = 0; j < frames; j++) {
           if (frameArr[j] === -1) {
@@ -126,20 +140,24 @@ const App = () => {
     return { steps, faults, hits, refLen };
   };
 
+  /*------Optimal Algorithm--------*/
   const simulateOptimal = () => {
     const frames = numFrames;
     const ref = refString;
     const refLen = ref.length;
 
+    /*------Initialize Variables--------*/
     let frameArr = Array(frames).fill(-1);
     let faults = 0;
     let hits = 0;
     const steps = [];
 
+    /*------Process Pages--------*/
     for (let i = 0; i < refLen; i++) {
       const page = ref[i];
       let found = false;
 
+      /*------Check Page--------*/
       for (let j = 0; j < frames; j++) {
         if (frameArr[j] === page) {
           found = true;
@@ -155,6 +173,7 @@ const App = () => {
         faults++;
         result = "FAULT";
 
+        /*------Find Victim--------*/
         let replaceIndex = -1;
         for (let j = 0; j < frames; j++) {
           if (frameArr[j] === -1) {
@@ -167,6 +186,7 @@ const App = () => {
           let farthestNext = -1;
           let farIndex = 0;
 
+          /*------Look Ahead--------*/
           for (let j = 0; j < frames; j++) {
             let nextPos = Number.MAX_SAFE_INTEGER;
             for (let k = i + 1; k < refLen; k++) {
@@ -195,11 +215,13 @@ const App = () => {
     return { steps, faults, hits, refLen };
   };
 
+  /*------Clock Algorithm--------*/
   const simulateClock = () => {
     const frames = numFrames;
     const ref = refString;
     const refLen = ref.length;
 
+    /*------Initialize Variables--------*/
     let frameArr = Array(frames).fill(-1);
     let refBit = Array(frames).fill(0);
     let pointer = 0;
@@ -207,10 +229,12 @@ const App = () => {
     let hits = 0;
     const steps = [];
 
+    /*------Process Pages--------*/
     for (let i = 0; i < refLen; i++) {
       const page = ref[i];
       let found = false;
 
+      /*------Check Page--------*/
       for (let j = 0; j < frames; j++) {
         if (frameArr[j] === page) {
           found = true;
@@ -227,6 +251,7 @@ const App = () => {
         faults++;
         result = "FAULT";
 
+        /*------Second Chance--------*/
         let placed = false;
         for (let j = 0; j < frames; j++) {
           if (frameArr[j] === -1) {
@@ -256,9 +281,11 @@ const App = () => {
     return { steps, faults, hits, refLen };
   };
 
+  /*------Event Handlers--------*/
   const handleInputSubmit = (e) => {
     e.preventDefault();
 
+    /*------Validate Input--------*/
     if (numFrames === '' || isNaN(numFrames) || numFrames < 1 || numFrames > 100) {
       alert("Please enter a valid number of frames (1-100).");
       return;
@@ -271,6 +298,7 @@ const App = () => {
     }
   };
 
+  /*------Run Simulation--------*/
   const runSimulation = (algo) => {
     setSelectedAlgo(algo);
     let res;
@@ -303,6 +331,7 @@ const App = () => {
     setSelectedAlgo(null);
   };
 
+  /*------UI Components--------*/
   const renderInputScreen = () => (
     <div className="w-full max-w-2xl bg-white rounded-xl shadow-xl overflow-hidden border border-slate-200">
       <div className="bg-slate-900 p-6">
@@ -477,6 +506,7 @@ const App = () => {
     </div>
   );
 
+  /*------Main Render--------*/
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center py-12 px-4 font-sans text-slate-900">
       <div className="mb-10 text-center max-w-2xl">
